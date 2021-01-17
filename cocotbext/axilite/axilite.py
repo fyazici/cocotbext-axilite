@@ -42,18 +42,25 @@ class AXI4LiteMaster(BusDriver):
                 self.bus.awvalid <= 0
             if self.bus.wready.value:
                 self.bus.wvalid <= 0
-            if self.bus.awvalid == 0 and self.bus.wvalid == 0:
+            if (self.bus.awvalid == 0 and self.bus.wvalid == 0) or timeout == 0:
                 break
+            if timeout is not None:
+                timeout -= 1
             await RisingEdge(self.clock)
         
         self.bus.bready <= 1
         await RisingEdge(self.clock)
 
         while True:
-            if self.bus.bvalid.value:
+            if self.bus.bvalid.value or timeout == 0:
                 self.bus.bready <= 0
                 break
+            if timeout is not None:
+                timeout -= 1
             await RisingEdge(self.clock)
+
+        if timeout == 0:
+            return None
 
         return self.bus.bresp.value
     
@@ -63,19 +70,26 @@ class AXI4LiteMaster(BusDriver):
         await RisingEdge(self.clock)
 
         while True:
-            if self.bus.arready.value:
+            if self.bus.arready.value or timeout == 0:
                 self.bus.arvalid <= 0
                 break
+            if timeout is not None:
+                timeout -= 1
             await RisingEdge(self.clock)
         
         self.bus.rready <= 1
         await RisingEdge(self.clock)
 
         while True:
-            if self.bus.rvalid.value:
+            if self.bus.rvalid.value or timeout == 0:
                 self.bus.rready <= 0
                 break
+            if timeout is not None:
+                timeout -= 1
             await RisingEdge(self.clock)
+        
+        if timeout == 0:
+            return (None, None)
 
         return (self.bus.rdata.value, self.bus.rresp.value)
 
@@ -106,6 +120,7 @@ class AXI4LiteSlaveMem(BusDriver):
 
     async def start(self):
         while True:
+            # "wait for valid" type slave
             while True:
                 if self.bus.awvalid.value and self.bus.wvalid.value:
                     self.bus.awready <= 1
@@ -119,13 +134,12 @@ class AXI4LiteSlaveMem(BusDriver):
 
             self.bus.awready <= 0
             self.bus.wready <= 0
+            self.bus.arready <= 0
             if self.bus.awvalid.value:
-                cocotb.log.info("slave write {} to {}".format(self.bus.wdata.value, self.bus.awaddr.value))
                 self.mem[str(self.bus.awaddr.value)] = self.bus.wdata.value
                 self.bus.bvalid <= 1
                 self.bus.bresp <= 0
             else:
-                cocotb.log.info("slave read {}".format(self.bus.araddr.value))
                 self.bus.rvalid <= 1
                 if str(self.bus.araddr.value) in self.mem:
                     self.bus.rdata <= self.mem[str(self.bus.araddr.value)]
