@@ -4,7 +4,7 @@
 import cocotb
 from cocotb.triggers import RisingEdge, ReadWrite
 from cocotb_bus.drivers import BusDriver
-from cocotb.monitors import BusMonitor
+from cocotb_bus.monitors import BusMonitor
 
 
 #pylint: disable=no-member
