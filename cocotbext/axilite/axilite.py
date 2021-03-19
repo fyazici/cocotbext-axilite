@@ -3,7 +3,7 @@
 
 import cocotb
 from cocotb.triggers import RisingEdge, ReadWrite
-from cocotb.drivers import BusDriver
+from cocotb_bus.drivers import BusDriver
 from cocotb.monitors import BusMonitor
 
 
